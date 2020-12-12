@@ -52,7 +52,7 @@ int check_correctness1(int* A, int* A1, int n) {
 int check_correctness2(int A[][51], int A1[][51], int n) {
     int i, j, raise_error = 0;
     for (i = 0; i < n; i++)
-        for (j = 0; j < 101; j++)
+        for (j = 0; j < 51; j++)
             if (A[i][j] != A1[i][j]) raise_error = 1;
 
     return raise_error;

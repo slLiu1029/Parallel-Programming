@@ -1,0 +1,6 @@
+lectures/
+homework/pseudoCode/
+homework/ex1/out/
+homework/ex1/.*
+homework/example/out/
+homework/example/.vscode/

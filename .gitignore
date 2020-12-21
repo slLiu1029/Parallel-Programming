@@ -4,3 +4,9 @@ homework/ex1/out/
 homework/ex1/.*
 homework/example/out/
 homework/example/.vscode/
+test_MPI/
+*.pdf
+.clang-format
+out/
+pics/
+picture/

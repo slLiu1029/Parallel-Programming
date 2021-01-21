@@ -15,10 +15,25 @@ int main(int argc, char const *argv[]) {
 
     /* Parallel program */
     omp_set_num_threads(NUM_THREADS);
-    for (i = 2; i <= 20; i += 2) {
-#pragma omp parallel for private(j)
-        for (j = i; j <= i + 1; j++) {
-            if (j > 20) continue;
+    //     for (i = 2; i <= 20; i += 2) {
+    // #pragma omp parallel for private(j)
+    //         for (j = i; j <= i + 1; j++) {
+    //             if (j > 20) continue;
+    //             A[2 * i + 2] = A[2 * i - 2] + B[i];
+    //             if (A[2 * i + 2] != A_copy[2 * i + 2]) raise_errors = 1;
+    //         }
+    //     }
+
+#pragma omp parallel sections private(i)
+    {
+#pragma omp section
+        for (i = 2; i <= 20; i += 2) {
+            A[2 * i + 2] = A[2 * i - 2] + B[i];
+            if (A[2 * i + 2] != A_copy[2 * i + 2]) raise_errors = 1;
+        }
+
+#pragma omp section
+        for (i = 3; i <= 19; i += 2) {
             A[2 * i + 2] = A[2 * i - 2] + B[i];
             if (A[2 * i + 2] != A_copy[2 * i + 2]) raise_errors = 1;
         }

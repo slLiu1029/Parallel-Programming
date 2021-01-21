@@ -8,3 +8,6 @@ test_MPI/
 *.pdf
 .clang-format
 out/
+homework/ex2/src/a_2_1.c
+test*
+old-final-exam/

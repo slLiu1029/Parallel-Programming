@@ -4,7 +4,7 @@
 
 &emsp;&emsp; 语句对自身有流依赖关系，方向向量为(1,1)，因此内层可以并行化。使用`parallel for`对内层循环并行化，并行部分的代码为：
 
-```C{.line-numbers}
+```c
     /* Parallel program */
     for (i = 2; i <= 10; i++) {
         omp_set_num_threads(NUM_THREADS);
@@ -18,7 +18,7 @@
 
 其中`raise_errors`用来记录并行计算时是否有数组与串行计算结果不同。
 
-```C{.line-numbers}
+```c
    /* Check if there exists any error */
     if (raise_errors)
         printf("Errors!");
@@ -38,7 +38,7 @@
 
 &emsp;&emsp; 语句对自身有流依赖，但距离向量是 2，因此可以每两个循环（偶数 i 和 i+1）为一组，组内可以并行化计算，但粒度较小，组间串行计算。同样使用`parallel for`对包括两个循环的组进行并行化，关键部分代码如下：
 
-```C{.line-numbers}
+```c
    /* Parallel program */
     omp_set_num_threads(NUM_THREADS);
     for (i = 2; i <= 20; i += 2) {
@@ -61,7 +61,7 @@
 
 &emsp;&emsp;对数组 A 的初始化代码如下
 
-```C{.line-numbers}
+```c
 for (i = 0; i < 21; i++) {
         if (i < 13)
             A[i] = A1[i] = 1;
@@ -74,7 +74,7 @@ for (i = 0; i < 21; i++) {
 
 这样一来，循环就可以并行化，并行化计算的函数如下
 
-```c{.line-numbers}
+```c
 void parallel(int *A, int *B, int *C) {
     int i;
     omp_set_num_threads(NUM_THREADS);
@@ -89,7 +89,7 @@ void parallel(int *A, int *B, int *C) {
 
 `check_correctness`函数作用是检查串行和并行计算结果有无不同，具体代码如下
 
-```c{.line-numbers}
+```c
 /* Check if there is any difference between two arrays */
 int check_correctness(int *A, int *A1) {
     int i, raise_errors = 0;
@@ -111,7 +111,7 @@ int check_correctness(int *A, int *A1) {
 
 &emsp;&emsp;语句自身对自身有流依赖关系，方向向量为(1,1)，因此内层循环可以并行化。并行部分代码如下
 
-```c{.line-numbers}
+```c
     for (i = 1; i <= M; i++) {
         omp_set_num_threads(NUM_THREADS);
 #pragma omp parallel for private(j)
@@ -133,7 +133,7 @@ int check_correctness(int *A, int *A1) {
 
 &emsp;&emsp;语句 S2 和 S3 相互依赖，而 S4 依赖 S3，S1 依赖 S4，因此可以改变语句顺序。最外层循环串行，里面有语句 S2，S3，S4.其中 S2 和 S3 在第二层循环也串行计算，但语句 S3 涉及的第三层循环可以并行化。在 S2 与 S3 在第二层循环串行计算结束后，可以对语句 S4 进行第二层循环并行化计算。在最外层循环结束后，S2、S3、S4 计算结束，最后可对语句 S1 的循环进行并行化。并行部分代码如下
 
-```c{.line-numbers}
+```c
 /* Parallel computing */
 void parallel(int* X, int* Y, int A[][101], int* B, int C[][101]) {
     int i, j, k;
@@ -158,7 +158,7 @@ void parallel(int* X, int* Y, int A[][101], int* B, int C[][101]) {
 
 然后根据串行计算的结果检验所有数组是否有计算错误，涉及的代码段有
 
-```c{.line-numbers}
+```c
     /* Check if there is any error */
     int X_error = check_correctness1(X, X1, 101);
     int Y_error = check_correctness1(Y, Y1, 201);
@@ -183,7 +183,7 @@ void parallel(int* X, int* Y, int A[][101], int* B, int C[][101]) {
 
 &emsp;&emsp;S2, S3 和 S4 之间有相互依赖关系，而 S5 与这三个语句没有依赖关系。因此可以使用`parallel sections`编译制导来划分两个并行 section，其中一个 section 为{S2, S3, S4}，另一个 section 为{S5}. 两个 section 内部都只能串行计算，而两个 section 可以并行计算。串行计算代码为
 
-```c{.line-numbers}
+```c
 /* Parallel computing */
 void parallel(int x, int y, int z, int* A, int* B, int* C, int D[][51]) {
     int i, j;
@@ -221,7 +221,7 @@ void parallel(int x, int y, int z, int* A, int* B, int* C, int D[][51]) {
 
 &emsp;&emsp;这个语句存在流依赖关系，距离向量为 3，因此可以做粒度为 3 的并行化处理。并行计算代码如下
 
-```c{.line-numbers}
+```c
     /* Parallel computing */
     omp_set_num_threads(NUM_THREADS);
     for (i = 1; i <= 16; i += 3)
@@ -249,7 +249,7 @@ void parallel(int x, int y, int z, int* A, int* B, int* C, int D[][51]) {
 
 &emsp;&emsp;设程序中四个语句分别为 S, T, U, V. 其中 T 和 U 之间有相互的流依赖关系，S 流依赖与 T，V 流依赖与 U，因此可以先串行计算语句 T 和 U，然后用`parallel sections`来并行计算 S 和 V。其中 S 和 V 内部也可以对循环进行并行化，用到的制导是`parallel for`。整个并行化处理的代码如下
 
-```c{.line-numbers}
+```c
     /* Parallel computing */
     for (i = 1; i <= 100; i++) {
         B[i] = C[i - 1] * 2;
@@ -287,7 +287,7 @@ void parallel(int x, int y, int z, int* A, int* B, int* C, int D[][51]) {
 
 &emsp;&emsp;记上下两个语句分别为 S 和 T，其中 T 流依赖于 S，而 S 也可能反依赖于 T。当 i < 500 时，999 - i + 1 > 500; 当 i > 500 时，999 - i + 1 < 500。因此可把循环拆成 1-499 和 500-999，且先执行 1-499 部分。并行代码如下
 
-```c{.line-numbers}
+```c
     /* Parallel computing */
     omp_set_num_threads(NUM_THREADS);
 #pragma omp parallel for private(i)
@@ -322,7 +322,7 @@ void parallel(int x, int y, int z, int* A, int* B, int* C, int D[][51]) {
 
 &emsp;&emsp;作业中已经分析证明了不同循环之间语句没有任何依赖关系，因此可以对两层循环都进行并行化，并行处理代码如下
 
-```c{.line-numbers}
+```c
     /* Parallel computing */
     omp_set_num_threads(NUM_THREADS);
 #pragma omp parallel for private(i, j)

@@ -8,7 +8,7 @@
 
 &emsp;&emsp;首先对 MPI 进行初始化，并获得进程数和各个进程的 rank。
 
-```c{.line-numbers}
+```c
     // 初始化
     int rank, size;
     MPI_Init(NULL, NULL);
@@ -18,7 +18,7 @@
 
 &emsp;&emsp;用`MPI_Get_processor_name`获得节点的名称，并用`node_name`存储。`node_num`是节点名字最后一个字符转换为数字的结果。再用`MPI_Gather`将个各进程所在的节点放入数组`node_nums`存储。
 
-```c{.line-numbers}
+```c
     char node_name[20];
     int len;
     int* node_nums = (int*)malloc(sizeof(int) * size);
@@ -30,7 +30,7 @@
 
 &emsp;&emsp;根据进程所在节点数字来对所有进程进行分组。`process_nums_in_node`数组用来存储各节点包含的进程数，`process_nums_in_node[i]`表示节点`i`的进程数量。`new_ranks`存放各进程在新分组内的新 rank。
 
-```c{.line-numbers}
+```c
     int* new_ranks = (int*)malloc(sizeof(int) * size);
     int process_nums_in_node[100];
     int i;
@@ -45,7 +45,7 @@
 
 &emsp;&emsp;由于之前的参量都是在进程 0 完成收集和计算的，因此需要将`new_ranks`对所有进程进行广播，然后用`MPI_Comm_split`将进程根据节点划分到`split_world`通信域中。
 
-```c{.line-numbers}
+```c
     MPI_Bcast(new_ranks, size, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm myworld, split_world;
     MPI_Comm_dup(MPI_COMM_WORLD, &myworld);
@@ -55,7 +55,7 @@
 
 &emsp;&emsp;最后输出进程在原有原有通信域和节点通信域的 rank。
 
-```c{.line-numbers}
+```c
     int new_rank;
     MPI_Comm_rank(split_world, &new_rank);
     printf("old rank: %d\tnode No. : %d\tnew rank: %d\n", rank, node_num,
@@ -75,7 +75,7 @@
 
 &emsp;&emsp;`message`是字符串消息，具体为`This is Sili!`。初始只有在 root 进程，`message`才会被赋值。root 进程将消息先发送给 new rank 为 0 的进程。然后这些 new rank 为 0 且非 root 的进程将消息接收。
 
-```c{.line-numbers}
+```c
     char message[15];
     if (!rank) {
         strcpy(message, "This is Sili!");
@@ -91,7 +91,7 @@
 
 然后每组 0 号进程将消息广播给组内所有成员。打印看看是否所有进程都有收到消息。
 
-```c{.line-numbers}
+```c
     int group_size, group_rank;
     MPI_Comm_rank(split_world, &group_rank);
     MPI_Comm_size(split_world, &group_size);
@@ -119,7 +119,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 参数与`MPI_Alltoall`的设置相同。首先计算进程`i`对应与两个 buffer 数组的`index`，具体为` index = i * sendcount * sizeof(sendtype)`。对于自己本身需要调用`MPI_Sendrecv`函数，其他直接用`MPI_Send`发送消息。
 
-```c{.line-numbers}
+```c
     for (i = 0; i < size; i++) {
         index = i * sendcount * sizeof(sendtype);
         if (rank == i) {
@@ -135,7 +135,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 然后从其他进程逐个接收消息即可。
 
-```c{.line-numbers}
+```c
     for (i = 0; i < size; i++) {
         index = i * sendcount * sizeof(recvtype);
         if (rank != i) {
@@ -147,7 +147,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 &emsp;&emsp;进入主函数，首先先定义两对发送接收 buffer，分别用于模拟的和 MPI 的函数，然后对发送缓冲区进行初始化。
 
-```c{.line-numbers}
+```c
     int *sendbuf = (int *)malloc(sizeof(int) * size * 3);
     int *recvbuf = (int *)malloc(sizeof(int) * size * 3);
     int *sendbuf1 = (int *)malloc(sizeof(int) * size * 3);
@@ -158,7 +158,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 分别对两个函数进行计时，其中开始计时和结束计时前都需要用到`MPI_Barrier`以保证所有进程都同时开始或全部结束运行函数。
 
-```c{.line-numbers}
+```c
     MPI_Barrier(MPI_COMM_WORLD);
     double begin_time = MPI_Wtime();
     my_MPI_Alltoall(sendbuf1, 3, MPI_INT, recvbuf1, 3, MPI_INT, MPI_COMM_WORLD);
@@ -176,7 +176,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 用`is_right`记录单个进程是否有错误，`is_all_right`对所有进程`is_right`求和，当所有`is_right = 1`时，`is_all_right = size`，此时可保证所有进程运行两个函数收到的消息是相同的。
 
-```c{.line-numbers}
+```c
     int is_right = 1;
     for (i = 0; i < 3 * size; i++)
         if (recvbuf1[i] != recvbuf[i]) is_right = 0;
@@ -209,7 +209,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 &emsp;&emsp;关键部分代码如下。`group`代表每组交换信息的进程数。每轮结束后`group`都会翻倍。在交换信息前，首先要确定这轮要通信的目标进程，用`process_comm`来表示。然后把自己的求和结果`sum`发送出去，用`temp`接收另一组的求和结果，并加到`sum`上去，最后可以得到所有进程号的和。
 
-```c{.line-numbers}
+```c
     int group = 2, sum = rank, temp, process_comm;
     while (group <= size) {
         if (rank % group < group / 2)
@@ -239,7 +239,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 &emsp;&emsp;向上求和过程中我们把右结点的数发送给左结点，然后右结点此后不再接收任何消息，这样便可保证每轮过后节点数会减半，最终 0 号进程得到求和结果。然后再将前面的过程反过来就可以将求和结果发送给所有进程。关键代码如下
 
-```c{.line-numbers}
+```c
     int group = 2, sum = rank, process_comm, temp;
     while (group <= size) {
         if (rank % group == 0) {
@@ -282,7 +282,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 &emsp;&emsp;首先先完成初始化，其中`check_size()`检查进程数是否为完全平方数，否则程序将出错。
 
-```c{.line-numbers}
+```c
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -291,7 +291,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 接下来计算一些必要的参数，例如分块后矩阵的行列维度`blocks_dim`，一个矩阵块的行列维度`dim`。`fox`函数就是利用 fox 算法完成对 A1，B1 的乘法运算，矩阵 C 是 A\*B 的矩阵中的分块。
 
-```c{.line-numbers}
+```c
     int blocks_dim = (int)sqrt((double)size), dim = N / blocks_dim;
     int C[dim * dim];
     int i;
@@ -301,7 +301,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 &emsp;&emsp;下面介绍`fox`函数。首先`A`, `B`表示进程对应的矩阵块，`block_row`, `block_col`表示矩阵块的行列下标。
 
-```c{.line-numbers}
+```c
     int blocks_dim = (int)sqrt((double)size), dim = N / blocks_dim;
     int A[dim * dim], B[dim * dim];
     initialize_block_matrix(A, B, A1, B1, blocks_dim, dim, rank);
@@ -312,7 +312,7 @@ void my_MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 &emsp;&emsp;首先是 A 中每行的广播。如果是这个`loop`的广播列，则向这行所有块发送自己的块，否则等待接收广播块的块。然后完成对应矩阵块相乘。
 
-```c{.line-numbers}
+```c
 if (block_col == (block_row + loop) % blocks_dim) {
             for (j = 0; j < blocks_dim; j++)
                 if (j != block_col)
@@ -337,7 +337,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 乘操作结束后，B 中每行向上平移一行。在每次循环设置一个 Barrier，以保证所有进程都已结束本次循环，并准备开始下一个循环。
 
-```c{.line-numbers}
+```c
         MPI_Sendrecv(
             B, dim * dim, MPI_INT,
             block_row_col_to_rank((block_row - 1 + blocks_dim) % blocks_dim,
@@ -353,7 +353,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 &emsp;&emsp;接下来打印矩阵整个矩阵 A1，B1 及他俩相乘应该得到的结果矩阵 C1，然后在把所有分块按顺序打印对比结果，用自定义的`print_all_blocks_in_order`函数完成此操作。
 
-```c{.line-numbers}
+```c
     if (!rank) {
         printf("Matrix A:\n");
         print_matrix(A1);
@@ -368,7 +368,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 下面的程序是验证 fox 算法求出的结果是否是正确的。
 
-```c{.line-numbers}
+```c
     int is_right = check_correctness(C, C1, dim, rank, blocks_dim);
     int is_all_right;
     MPI_Reduce(&is_right, &is_all_right, 1, MPI_INT, MPI_SUM, 0,
@@ -391,14 +391,14 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 &emsp;&emsp;首先规定服务器进程数和最大循环数。
 
-```c{.line-numbers}
+```c
 #define P 3
 #define MAX_LOOP 2
 ```
 
 接下来初始化服务器进程组`servers`，然后把所有服务器放入服务器通信域`server_world`.
 
-```c{.line-numbers}
+```c
     int Q = size - P, servers[P], i;
     for (i = 0; i < P; i++) servers[i] = i;
 
@@ -411,7 +411,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 每个工作进程都设置随机种子`srand(rank + time(0));`，然后进行两次工作循环。在每个循环中，工作进程将随机数发给对应的服务器进程，然后等待服务器接收并计算完成后接收平均值结果`mean_result`。
 
-```c{.line-numbers}
+```c
         if (rank >= P) {
             int msg = rand() % 1000, served_by = rank % P;
             printf("rank: %d\tserver: %d\tmessage: %d\n", rank, served_by, msg);
@@ -426,7 +426,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 每个服务器进程接收负责的工作进程的数。
 
-```c{.line-numbers}
+```c
         } else {
             int recv_msg, msg_sum = 0, msg_num = 0;
             for (i = rank + P; i < size; i += P) {
@@ -438,7 +438,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 设置 Barrier 确保所有服务进程接收了所有由其负责的工作进程的消息，然后计算工作进程的平均值，再将结果发送给其负责的所有工作进程即可。最终设置 Barrier 保证所有进程都到达本次循环的终点。
 
-```c{.line-numbers}
+```c
             int all_msg_sum, all_msg_num;
             MPI_Barrier(server_world);
             MPI_Allreduce(&msg_sum, &all_msg_sum, 1, MPI_INT, MPI_SUM,
@@ -468,7 +468,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 &emsp;&emsp;首先完成初始化，`A1`，`B1`是整个矩阵，`A`，`B`是本进程划分到的矩阵块，`rows_per_block`是每块的行数。
 
-```C{.line-numbers}
+```c
     double A1[N * N], B1[N * N];
     initialize1(A1, B1);
 
@@ -485,7 +485,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 用数组`up`和`low`来接收上一块最后一行和下一块首行。`communicate_with_neighbor`函数完成进程块之间的信息交换，`calculate`函数完成对矩阵块`B`的计算。
 
-```C{.line-numbers}
+```c
     double up[N], low[N];
     communicate_with_neighbor(rank, size, status, A, rows_per_block, up, low);
     calculate(rank, A, B, rows_per_block, size, up, low);
@@ -493,7 +493,7 @@ if (block_col == (block_row + loop) % blocks_dim) {
 
 `communicate_with_neighbor`函数具体代码如下。
 
-```C{.line-numbers}
+```c
 void communicate_with_neighbor(int rank, int size, MPI_Status status, double* A,
                                int rows, double* up, double* low) {
     MPI_Sendrecv(A, N, MPI_DOUBLE, (rank - 1 + size) % size, 0, low, N,
@@ -507,7 +507,7 @@ void communicate_with_neighbor(int rank, int size, MPI_Status status, double* A,
 
 `calculate`代码如下。对于第一块和最后一块，他们的第一行和最后一行是不用计算的，剩下的块的首行和末行都需要上一块的最后一行和下一块的第一行。
 
-```C{.line-numbers}
+```c
 void calculate(int rank, double* A, double* B, int rows, int size, double* up,
                double* low) {
     int i, j;
@@ -532,7 +532,7 @@ void calculate(int rank, double* A, double* B, int rows, int size, double* up,
 
 然后完成打印矩阵和验证分块计算是否正确。
 
-```C{.line-numbers}
+```c
     if (!rank) {
         printf("Matrix A:\n");
         print_matrix(A1);
@@ -564,7 +564,7 @@ void calculate(int rank, double* A, double* B, int rows, int size, double* up,
 
 &emsp;&emsp;通信函数输入参数如下
 
-```C{.line-numbers}
+```c
 void communicate_with_neighbor(int rank, int size, MPI_Status status, double* A,
                                int block_dim, int dim, double* up, double* down,
                                double* left, double* right)
@@ -572,7 +572,7 @@ void communicate_with_neighbor(int rank, int size, MPI_Status status, double* A,
 
 首先接收上下两块与本块的相邻行
 
-```C{.line-numbers}
+```c
     MPI_Sendrecv(A, dim, MPI_DOUBLE, (rank - block_dim + size) % size, 0, down,
                  dim, MPI_DOUBLE, (rank + block_dim) % size, 0, MPI_COMM_WORLD,
                  &status);
@@ -583,7 +583,7 @@ void communicate_with_neighbor(int rank, int size, MPI_Status status, double* A,
 
 对于左右两块，由于取的是与本块相邻的列，因此需要用数组存储目标列，然后在将此数组发送给相邻块。
 
-```C{.line-numbers}
+```c
     int i;
     double left_most[dim], right_most[dim];
     for (i = 0; i < dim; i++) {
